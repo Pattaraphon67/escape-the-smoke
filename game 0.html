@@ -1,0 +1,500 @@
+```html
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Escape The Smoke - Unique 60 Cards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --board-size: 94vw;
+            --max-board-px: 550px;
+        }
+        @media (min-height: 800px) {
+            --board-size: 78vh;
+        }
+
+        body {
+            font-family: 'Prompt', sans-serif;
+            background: radial-gradient(circle at center, #1e1b4b, #020617);
+            color: #fff;
+            margin: 0; padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            gap: 8px;
+        }
+
+        .board-container {
+            position: relative;
+            width: var(--board-size);
+            max-width: var(--max-board-px);
+            aspect-ratio: 1;
+        }
+
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(11, 1fr);
+            grid-template-rows: repeat(11, 1fr);
+            gap: 2px;
+            width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+            z-index: 10;
+        }
+
+        .center-text {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            text-align: center;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .center-text h2 {
+            font-size: clamp(1.5rem, 6vw, 2.2rem);
+            font-weight: 900;
+            line-height: 0.9;
+            color: rgba(255, 255, 255, 0.06);
+            text-transform: uppercase;
+        }
+
+        .cell {
+            background: #ffffff;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.45rem;
+            font-weight: 800;
+            color: #1e293b;
+            position: relative;
+            text-align: center;
+            box-shadow: inset 0 -2px 0 rgba(0,0,0,0.1);
+        }
+
+        .cell-start { background: #fbbf24 !important; color: #92400e; }
+        .cell-empty { background: rgba(255, 255, 255, 0.1) !important; color: rgba(255,255,255,0.2) !important; border: 1px dashed rgba(255,255,255,0.1); box-shadow: none; }
+        .type-yesno { background: #bae6fd !important; border: 1px solid #7dd3fc; } 
+        .type-knowledge { background: #fbcfe8 !important; border: 1px solid #f9a8d4; } 
+        .type-scenario { background: #fecaca !important; border: 1px solid #fca5a5; } 
+
+        .player-token {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            border: 1.5px solid #fff;
+            position: absolute;
+            z-index: 20;
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .dice-box {
+            font-size: 2rem;
+            width: 50px; height: 50px;
+            background: white; color: #1e293b;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 0 #cbd5e1;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .modal-card { border-radius: 2rem; max-height: 90vh; overflow-y: auto; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <!-- Setup Screen -->
+    <div id="setup-screen" class="w-full max-w-sm bg-slate-900/95 p-8 rounded-[2.5rem] border border-white/10 shadow-2xl">
+        <h1 class="text-2xl font-black text-center mb-1 text-indigo-400">ESCAPE THE SMOKE</h1>
+        <p class="text-[9px] text-center text-slate-500 mb-6 font-bold uppercase tracking-wider italic">60 Unique Cards Challenge</p>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2 text-center">เลือกจำนวนผู้เล่น</label>
+                <input type="range" id="p-count" min="2" max="5" value="2" class="w-full h-1.5 bg-slate-800 rounded-full appearance-none accent-indigo-500">
+                <div id="count-display" class="text-center font-black text-xl text-white mt-1">2 คน</div>
+            </div>
+            <div id="names-box" class="space-y-2 max-h-32 overflow-y-auto no-scrollbar"></div>
+            <button onclick="startGame()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-3.5 rounded-xl shadow-lg transition-all active:scale-95">เริ่มภารกิจ</button>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="hidden w-full flex flex-col items-center gap-2">
+        <div class="w-full max-w-[550px] grid grid-cols-2 gap-2 px-2">
+            <div class="bg-slate-900/60 p-3 rounded-2xl border border-white/5">
+                <div class="flex justify-between text-[8px] font-black mb-1">
+                    <span class="text-indigo-400 uppercase">Leaderboard</span>
+                    <span id="card-counter" class="text-white bg-indigo-600 px-1.5 rounded">0/60</span>
+                </div>
+                <div id="rankings" class="space-y-1 overflow-y-auto max-h-16 no-scrollbar"></div>
+            </div>
+            <div class="bg-slate-900/60 p-3 rounded-2xl border border-white/5 flex items-center justify-around">
+                <div class="text-center">
+                    <p id="turn-label" class="text-[9px] font-black uppercase mb-1 truncate max-w-[80px]">PLAYER</p>
+                    <div id="dice" class="dice-box" onclick="rollDice()">🎲</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="board-container">
+            <div class="center-text">
+                <h2>ESCAPE<br>THE SMOKE</h2>
+            </div>
+            <div id="board" class="board-grid"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md hidden z-50 flex items-center justify-center p-4">
+    <div id="modal-content" class="max-w-sm w-full bg-white p-6 text-center modal-card shadow-2xl">
+        <div id="card-badge" class="inline-block px-3 py-1 rounded-full text-[8px] font-black text-white mb-3"></div>
+        <div id="card-question" class="text-lg font-bold text-slate-800 mb-6 leading-tight"></div>
+        
+        <div id="type-box" class="hidden mb-4">
+            <input type="text" id="type-input" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-bold text-slate-800 outline-none focus:border-indigo-500" placeholder="พิมพ์คำตอบที่นี่...">
+        </div>
+
+        <div id="feedback-summary" class="hidden mb-6 space-y-2 text-left">
+            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b pb-1 mb-2">สรุปผล</h4>
+            <div id="feedback-list" class="space-y-1.5"></div>
+        </div>
+
+        <div id="final-results" class="hidden mb-6 space-y-3">
+            <div id="final-rank-list" class="space-y-2"></div>
+        </div>
+
+        <div id="card-btns" class="grid gap-2"></div>
+    </div>
+</div>
+
+<script>
+    // --- 60 UNIQUE QUESTIONS DB ---
+    const DB_YN = [
+        {q:"นิโคตินในบุหรี่ไฟฟ้าไม่ทำให้เสพติด?", a:false, r:"นิโคตินเป็นสารเสพติดรุนแรงเหมือนบุหรี่มวน"},
+        {q:"ควันบุหรี่ไฟฟ้าเป็นเพียงไอน้ำบริสุทธิ์?", a:false, r:"มันคือละอองสารเคมีและโลหะหนักอันตราย"},
+        {q:"บุหรี่ไฟฟ้าถูกกฎหมายในประเทศไทย?", a:false, r:"การนำเข้าและครอบครองยังผิดกฎหมายไทย"},
+        {q:"นิโคตินส่งผลเสียต่อการพัฒนาสมองวัยรุ่น?", a:true, r:"ขัดขวางการเติบโตของสมองส่วนการตัดสินใจ"},
+        {q:"การสูบบุหรี่ไฟฟ้าทำให้ปอดอักเสบเฉียบพลันได้?", a:true, r:"สารเคมีในน้ำยาทำให้เกิดภาวะ EVALI ได้"},
+        {q:"บุหรี่ไฟฟ้าไม่มีสารก่อมะเร็ง?", a:false, r:"มีสารฟอร์มาดีไฮด์และเบนซีนที่ก่อมะเร็ง"},
+        {q:"น้ำยาบุหรี่ไฟฟ้าผสมสารแต่งกลิ่นที่ปลอดภัยต่อปอด?", a:false, r:"ปลอดภัยเมื่อกิน แต่สารแต่งกลิ่นอันตรายเมื่อเข้าปอด"},
+        {q:"วัยรุ่นที่เริ่มด้วยบุหรี่ไฟฟ้ามีโอกาสไปสูบบุหรี่มวนสูงขึ้น?", a:true, r:"เป็นประตูสู่สารเสพติดชนิดอื่น (Gateway Effect)"},
+        {q:"บุหรี่ไฟฟ้าช่วยให้เลิกบุหรี่ได้ถาวร?", a:false, r:"มักกลายเป็นการสูบทั้งสองอย่างคู่กัน"},
+        {q:"การรับนิโคตินมากเกินไปทำให้หัวใจเต้นผิดจังหวะ?", a:true, r:"นิโคตินกระตุ้นหัวใจให้ทำงานหนักเกินไป"},
+        {q:"ควันมือสองจากบุหรี่ไฟฟ้าไม่เป็นอันตรายต่อคนรอบข้าง?", a:false, r:"คนรอบข้างยังได้รับสารเคมีและนิโคตินจากละอองลอย"},
+        {q:"Toy Pod ออกแบบมาเพื่อดึงดูดเด็กและเยาวชน?", a:true, r:"ใช้รูปทรงการ์ตูนเพื่อลดความน่ากลัวของยาเสพติด"},
+        {q:"สารโลหะหนักในบุหรี่ไฟฟ้ามาจากขดลวดความร้อน?", a:true, r:"ความร้อนทำให้โลหะหลุดออกมากับละอองลอย"},
+        {q:"การสูบบุหรี่ไฟฟ้าทำให้เหงือกและฟันเสียหาย?", a:true, r:"ทำให้ช่องปากแห้งและแบคทีเรียสะสมง่ายขึ้น"},
+        {q:"การเลือก 'ไม่เริ่มสูบ' ง่ายกว่าการเลิกสูบในภายหลัง?", a:true, r:"เพราะสมองที่ติดยาแล้วจะต้องการสารตลอดเวลา"},
+        {q:"นิโคตินทำให้เส้นเลือดหดตัวจนความดันสูงขึ้น?", a:true, r:"เป็นผลโดยตรงต่อระบบหลอดเลือด"},
+        {q:"น้ำยาแบบ Salt Nic อันตรายกว่าแบบเดิม?", a:true, r:"เพราะร่างกายดูดซึมนิโคตินได้ไวและเข้มข้นกว่า"},
+        {q:"พอดใช้แล้วทิ้งปลอดภัยกว่าแบบเติม?", a:false, r:"อันตรายจากสารเคมีเหมือนกันและสร้างขยะอิเล็กทรอนิกส์"},
+        {q:"บุหรี่ไฟฟ้าทำให้สมรรถภาพทางกายลดลง?", a:true, r:"เหนื่อยง่ายและออกซิเจนในเลือดลดลง"},
+        {q:"การปฏิเสธเพื่อนที่ชวนสูบถือว่าเป็นเรื่องปกติ?", a:true, r:"การรักษาสุขภาพตนเองคือการตัดสินใจที่ฉลาดที่สุด"}
+    ];
+
+    const DB_KN = [
+        {q:"สารพิษชนิดใดในพอดที่ใช้ดองศพ?", k:["ฟอร์มาดีไฮด์","Formaldehyde"], r:"ฟอร์มาดีไฮด์เป็นสารก่อมะเร็งรุนแรง"},
+        {q:"ส่วนประกอบหลักในน้ำยาพอดที่ใช้ทำควันคือ?", k:["Propylene Glycol","Vegetable Glycerin","PG","VG"], r:"สารกลุ่มไกลคอลทำให้เกิดละอองหนา"},
+        {q:"นิโคตินส่งผลกระทบต่ออวัยวะใดมากที่สุดในวัยรุ่น?", k:["สมอง","Brain"], r:"ทำลายระบบสั่งการและการเรียนรู้"},
+        {q:"โรคปอดอักเสบจากบุหรี่ไฟฟ้ามีชื่อย่อว่าอะไร?", k:["EVALI"], r:"E-cigarette or Vaping product use-Associated Lung Injury"},
+        {q:"สารที่ทำให้เสพติดในพอดคือสารอะไร?", k:["นิโคติน","Nicotine"], r:"นิโคตินสกัดเข้มข้นทำให้ติดได้เร็วมาก"},
+        {q:"ควันที่ติดตามเสื้อผ้าหลังการสูบเรียกว่าควันมือที่เท่าไหร่?", k:["3","สาม"], r:"ควันมือสาม (Third-hand Smoke) ตกค้างนานและอันตราย"},
+        {q:"ทำไมวัยรุ่นถึงชอบ Toy Pod?", k:["สวย","การ์ตูน","น่ารัก","ขนม"], r:"เพราะรูปลักษณ์เข้าถึงง่ายและดูไม่อันตราย"},
+        {q:"นิโคติน 1 หัวพอด เทียบเท่าบุหรี่มวนประมาณกี่ซอง?", k:["1-2","2","หนึ่งถึงสอง"], r:"มีนิโคตินเข้มข้นมากเท่ากับบุหรี่ 20-40 มวน"},
+        {q:"โลหะหนักชนิดใดที่มักพบในละอองลอยบุหรี่ไฟฟ้า?", k:["นิกเกิล","ตะกั่ว","โครเมียม","ดีบุก"], r:"โลหะเหล่านี้ทำลายปอดและระบบประสาท"},
+        {q:"อาการอยากนิโคตินจนกระสับกระส่ายเรียกว่าอาการอะไร?", k:["ลงแดง","ถอนยา","อยากยา"], r:"เป็นสัญญาณของภาวะเสพติดรุนแรง"},
+        {q:"การสูบพอดส่งผลต่อระดับน้ำตาลในเลือดอย่างไร?", k:["สูง","เพิ่ม"], r:"นิโคตินขัดขวางการทำงานของอินซูลิน"},
+        {q:"ผู้ที่นำเข้าบุหรี่ไฟฟ้าเข้าไทยมีโทษสูงสุดคืออะไร?", k:["จำคุก","ปรับ","จับ"], r:"มีโทษทั้งจำและปรับตามกฎหมายศุลกากร"},
+        {q:"กลิ่นมินต์ในพอดมีผลอย่างไรต่อปอด?", k:["อักเสบ","ระคายเคือง"], r:"ทำให้เยื่อบุทางเดินหายใจอ่อนแอลง"},
+        {q:"Pod System แตกต่างจากบุหรี่มวนในด้านใดมากที่สุด?", k:["ความร้อน","เผาไหม้"], r:"พอดใช้ความร้อนไฟฟ้าแทนการเผาไหม้ แต่สารพิษยังมีอยู่"},
+        {q:"สารก่อมะเร็งที่พบในพอดคือ?", k:["เบนซีน","อะซีตัลดีไฮด์"], r:"เป็นสารที่ทำลาย DNA ในเซลล์"},
+        {q:"การสูบพอดทำให้หัวใจต้องทำงานอย่างไร?", k:["หนัก","เร็ว"], r:"กระตุ้นหัวใจให้เต้นถี่ขึ้นและขาดเลือดได้"},
+        {q:"ภาวะ Popcorn Lung เกิดจากสารอะไร?", k:["Diacetyl","ไดอะเซทิล"], r:"สารแต่งกลิ่นที่ทำลายถุงลมปอดถาวร"},
+        {q:"พอดใช้แล้วทิ้งมักจะมีสารนิโคตินแบบไหน?", k:["Salt Nic","ซอลต์นิค"], r:"เป็นรูปแบบที่ดูดซึมเข้าร่างกายได้เร็วมาก"},
+        {q:"วิธีเลิกพอดที่ดีที่สุดคือวิธีใด?", k:["ใจ","ปรึกษา","สายด่วน","1600"], r:"การตั้งใจจริงและปรึกษาผู้เชี่ยวชาญช่วยได้มาก"},
+        {q:"นิโคตินส่งผลต่อสมาธิการเรียนอย่างไร?", k:["สั้น","ลด","แย่"], r:"ทำให้สมาธิสั้นและหงุดหงิดง่ายเมื่อไม่ได้สูบ"}
+    ];
+
+    const DB_SC = [
+        {q:"เพื่อนสนิทชวนลองพอดรสช็อกโกแลตบอกว่า 'ไม่อันตราย'?", o:[{t:"ปฏิเสธและเตือนเพื่อนเรื่องสารเคมี", p:5, r:"ความรู้คือเกราะป้องกันที่ดีที่สุด"}, {t:"ลองเพื่อพิสูจน์รสชาติ", p:-5, r:"การลองครั้งแรกคือจุดเริ่มต้นของการเสพติด"}]},
+        {q:"คุณเห็นรุ่นพี่สูบพอดในห้องน้ำโรงเรียน?", o:[{t:"เดินเลี่ยงออกมาและไม่เข้าใกล้ควัน", p:4, r:"หลีกเลี่ยงควันมือสอง"}, {t:"เข้าไปขอดูใกล้ๆ", p:-4, r:"การเข้าใกล้เพิ่มความเสี่ยงได้รับละอองสารพิษ"}]},
+        {q:"มีคนแปลกหน้าเสนอขายพอดราคาถูกให้?", o:[{t:"ไม่สนใจและเดินหนีทันที", p:5, r:"ปลอดภัยจากทั้งยาเสพติดและมิจฉาชีพ"}, {t:"ขอดูลายสวยๆ เผื่อจะซื้อ", p:-5, r:"การครอบครองเป็นเรื่องผิดกฎหมายและอันตราย"}]},
+        {q:"คุณเครียดเรื่องสอบและเพื่อนบอกว่าสูบแล้วจะหัวแล่น?", o:[{t:"ไปล้างหน้าและอ่านหนังสือต่อ", p:5, r:"สมองต้องการการพักผ่อน ไม่ใช่สารพิษ"}, {t:"ลองสูบแก้เครียด", p:-5, r:"นิโคตินจะยิ่งทำให้คุณเครียดกว่าเดิมในระยะยาว"}]},
+        {q:"แฟนขอให้คุณสูบเป็นเพื่อนกัน?", o:[{t:"ชวนแฟนไปทำกิจกรรมอื่นที่สุขภาพดี", p:5, r:"ความรักที่แท้จริงคือการดูแลสุขภาพของกันและกัน"}, {t:"ยอมสูบเพราะกลัวแฟนทิ้ง", p:-5, r:"สุขภาพของคุณสำคัญกว่าการเอาใจใครด้วยยาเสพติด"}]},
+        {q:"งานปาร์ตี้ทุกคนสูบพอดกันหมด คุณรู้สึกกดดัน?", o:[{t:"เป็นตัวเองและยืนยันไม่สูบ", p:6, r:"ความมั่นใจในสิ่งที่ถูกต้องคือความเท่"}, {t:"สูบเนียนๆ เพื่อให้เข้ากลุ่มได้", p:-6, r:"คุณกำลังสูญเสียตัวตนเพื่อแลกกับสารพิษ"}]},
+        {q:"รุ่นพี่บอกว่าพอดช่วยให้นอนหลับง่ายขึ้น?", o:[{t:"บอกว่านิโคตินเป็นสารกระตุ้น ทำให้นอนไม่หลับ", p:5, r:"นิโคตินขัดขวางการนอนหลับที่มีคุณภาพ"}, {t:"เชื่อและลองใช้ก่อนนอน", p:-5, r:"คุณจะตื่นมาพร้อมความล้าและติดยา"}]},
+        {q:"เพื่อนท้าให้เป่าควันเป็นรูปโดนัท?", o:[{t:"ท้าเพื่อนทำกิจกรรมอื่นแทน", p:4, r:"อย่าให้คำท้าไร้สาระมาทำลายปอด"}, {t:"ลองทำเพื่อให้เพื่อนยอมรับ", p:-5, r:"ปอดของคุณไม่ได้ออกแบบมาเพื่อพ่นควัน"}]},
+        {q:"เจอพอดตกอยู่ที่พื้นสนามเด็กเล่น?", o:[{t:"ไม่แตะต้องและแจ้งเจ้าหน้าที่", p:5, r:"ความปลอดภัยต้องมาก่อน"}, {t:"เก็บมาพกไว้เพราะมันสวยดี", p:-4, r:"เสี่ยงต่อความผิดกฎหมายและการติดเชื้อ"}]},
+        {q:"สื่อโซเชียลโฆษณาว่าพอดช่วยลดน้ำหนัก?", o:[{t:"รู้เท่าทันว่าเป็นการโฆษณาชวนเชื่อ", p:5, r:"สุขภาพดีมาจากการคุมอาหารและออกกำลังกาย"}, {t:"สั่งซื้อมาใช้เพื่อคุมน้ำหนัก", p:-6, r:"คุณจะได้ผลข้างเคียงเป็นโรคปอดแทน"}]},
+        {q:"เห็นพ่อแม่สูบบุหรี่ในบ้าน คุณกังวลเรื่องควัน?", o:[{t:"บอกพ่อแม่ด้วยความรักเรื่องความเสี่ยง", p:5, r:"การสื่อสารช่วยลดความเสี่ยงคนในครอบครัว"}, {t:"เฉยๆ เพราะคิดว่าเป็นเรื่องปกติ", p:-3, r:"ควันมือสองทำลายสุขภาพคุณทุกวัน"}]},
+        {q:"เพื่อนบอกว่า 'สูบพอดแล้วไม่มีกลิ่นปาก'?", o:[{t:"ตอบว่า 'แต่มีนิโคตินและสารก่อมะเร็งนะ'", p:5, r:"กลิ่นหอมบังหน้า สารพิษซ่อนหลัง"}, {t:"เชื่อเพื่อนและคิดว่าปลอดภัย", p:-4, r:"การหลงเชื่อโฆษณาปากต่อปากเป็นอันตราย"}]},
+        {q:"มีพอดรสชาติแปลกใหม่มาแจกฟรีให้ลอง?", o:[{t:"ปฏิเสธและไม่หลงกลของฟรี", p:5, r:"ของฟรีที่แลกด้วยสุขภาพคือของที่แพงที่สุด"}, {t:"ลองของฟรีเพราะไม่ต้องเสียเงิน", p:-6, r:"คุณอาจต้องจ่ายค่ารักษาแพงกว่าในอนาคต"}]},
+        {q:"คุณอยากดูเท่ในสายตาคนที่ชอบ โดยการสูบพอด?", o:[{t:"ออกกำลังกายและทำบุคลิกให้ดีแทน", p:6, r:"เสน่ห์ที่แท้จริงมาจากสุขภาพที่สดใส"}, {t:"แอบสูบให้เขาเห็น", p:-5, r:"คนส่วนใหญ่ชอบคนที่ดูแลตัวเองมากกว่าคนติดยา"}]},
+        {q:"เพื่อนฝากพอดไว้ในกระเป๋าคุณครู่เดียว?", o:[{t:"ปฏิเสธไม่รับฝากของผิดกฎหมาย", p:6, r:"ป้องกันตัวเองจากปัญหาทางกฎหมาย"}, {t:"ช่วยเพื่อนเพราะเห็นว่าเป็นเรื่องเล็ก", p:-5, r:"ถ้ามีการตรวจค้น คุณจะเป็นผู้รับผิดชอบ"}]},
+        {q:"ครูถามว่าใครเคยเห็นการขายพอดใกล้โรงเรียน?", o:[{t:"ให้ข้อมูลอย่างลับๆ เพื่อความปลอดภัย", p:5, r:"การช่วยดูแลสังคมคือหน้าที่พลเมืองดี"}, {t:"เงียบไว้เพราะไม่อยากยุ่ง", p:-2, r:"ปล่อยให้ภัยอันตรายขยายตัวในโรงเรียน"}]},
+        {q:"พี่ชายบอกว่าสูบพอดดีกว่าสูบเหล้า?", o:[{t:"บอกว่าอันตรายทั้งคู่ ไม่ควรเลือกอย่างใดอย่างหนึ่ง", p:5, r:"การเปรียบเทียบสารพิษไม่ได้ทำให้มันปลอดภัยขึ้น"}, {t:"หันไปสูบตามพี่", p:-6, r:"คุณกำลังเลียนแบบพฤติกรรมทำลายสุขภาพ"}]},
+        {q:"คุณรู้สึกประหม่าในกลุ่มเพื่อนใหม่?", o:[{t:"ใช้วิธีพูดคุยและเป็นมิตรแทนการสูบพอด", p:5, r:"มิตรภาพสร้างได้ด้วยความจริงใจ"}, {t:"ใช้การสูบพอดเป็นบัตรผ่านเข้ากลุ่ม", p:-5, r:"มิตรภาพบนพื้นฐานสารเสพติดมักไม่ยั่งยืน"}]},
+        {q:"คุณเจอคลิปสอนแต่งเครื่องพอดให้แรงขึ้น?", o:[{t:"กดรายงานคลิปและไม่สนใจ", p:5, r:"พอดที่แรงขึ้นเสี่ยงต่อการระเบิดและรับยาเกินขนาด"}, {t:"ลองทำตามเพื่อความแรง", p:-7, r:"เสี่ยงต่ออันตรายร้ายแรงทั้งจากไฟฟ้าและสารพิษ"}]},
+        {q:"มีค่ายเยาวชนต้านยาเสพติดรับสมัครสมาชิก?", o:[{t:"สมัครเข้าร่วมเพื่อเรียนรู้และช่วยเพื่อน", p:6, r:"การเป็นแกนนำสุขภาพเป็นเรื่องน่าภูมิใจ"}, {t:"ไม่สนใจเพราะคิดว่าน่าเบื่อ", p:0, r:"คุณพลาดโอกาสพัฒนาทักษะการป้องกันตนเอง"}]}
+    ];
+
+    const DB_MISSIONS = [
+        {t: "ตะโกน 'หนีควันพอด!' 3 ครั้ง", b: 2},
+        {t: "ทำท่าบ๊ายบายให้บุหรี่ไฟฟ้า", b: 3},
+        {t: "ยืนขาเดียวตอบข้อถัดไป", b: 3}
+    ];
+
+    // --- LOGIC ---
+    let players = [], turnIdx = 0, isAction = false;
+    let decks = { yn:[], kn:[], sc:[] };
+    let usedCount = 0;
+    const TARGET = 60;
+
+    document.getElementById('p-count').oninput = (e) => {
+        document.getElementById('count-display').innerText = `${e.target.value} คน`;
+        const b = document.getElementById('names-box'); b.innerHTML = '';
+        for(let i=0; i<e.target.value; i++) {
+            b.innerHTML += `<input type="text" class="p-in w-full p-2.5 bg-slate-800 text-white border border-white/10 rounded-xl font-bold text-xs" value="PLAYER ${i+1}">`;
+        }
+    };
+    document.getElementById('p-count').dispatchEvent(new Event('input'));
+
+    function startGame() {
+        players = Array.from(document.querySelectorAll('.p-in')).map((n, i) => ({
+            id: i, name: n.value, pos: 0, score: 0,
+            color: ['#6366f1', '#f43f5e', '#10b981', '#fbbf24', '#8b5cf6'][i]
+        }));
+        decks.yn = [...DB_YN].sort(() => Math.random() - 0.5);
+        decks.kn = [...DB_KN].sort(() => Math.random() - 0.5);
+        decks.sc = [...DB_SC].sort(() => Math.random() - 0.5);
+        usedCount = 0; turnIdx = 0;
+        document.getElementById('card-counter').innerText = `0/${TARGET}`;
+        
+        createBoard();
+        document.getElementById('setup-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        updateUI(); render(); startTurn();
+    }
+
+    function createBoard() {
+        const board = document.getElementById('board'); board.innerHTML = '';
+        const coords = [];
+        for(let i=0; i<=10; i++) coords.push({r:1, c:i+1});
+        for(let i=1; i<=10; i++) coords.push({r:i+1, c:11});
+        for(let i=9; i>=0; i--) coords.push({r:11, c:i+1});
+        for(let i=9; i>=1; i--) coords.push({r:i+1, c:1});
+
+        const safeIdx = new Set();
+        const rand = (min,max,c) => { 
+            let r=[]; while(r.length<c){ let v=Math.floor(Math.random()*(max-min+1))+min; if(!r.includes(v)) r.push(v); } return r; 
+        };
+        rand(1,10,2).forEach(v => safeIdx.add(v));
+        rand(11,20,4).forEach(v => safeIdx.add(v));
+        rand(21,30,3).forEach(v => safeIdx.add(v));
+        rand(31,39,4).forEach(v => safeIdx.add(v));
+
+        let types = [...Array(9).fill('yn'), ...Array(9).fill('kn'), ...Array(8).fill('sc')].sort(() => Math.random()-0.5);
+
+        coords.forEach((c, i) => {
+            let t = i===0 ? 'S' : (safeIdx.has(i) ? '🍃' : (types.pop() || '🍃'));
+            const d = document.createElement('div');
+            d.className = `cell ${t==='S'?'cell-start':(t==='🍃'?'cell-empty':(t==='yn'?'type-yesno':(t==='kn'?'type-knowledge':'type-scenario')))}`;
+            d.style.gridRow = c.r; d.style.gridColumn = c.c; d.id = `cell-${i}`;
+            d.innerHTML = t==='yn'?'Y/N':t==='kn'?'KNOW':t==='sc'?'SCEN':t;
+            board.appendChild(d);
+        });
+    }
+
+    function rollDice() {
+        if(isAction) return; isAction = true;
+        const d = document.getElementById('dice');
+        let v = Math.floor(Math.random()*6)+1, c=0;
+        let anim = setInterval(() => {
+            d.innerText = ['⚀','⚁','⚂','⚃','⚄','⚅'][Math.floor(Math.random()*6)];
+            if(c++ > 8) {
+                clearInterval(anim); d.innerText = ['⚀','⚁','⚂','⚃','⚄','⚅'][v-1];
+                players[turnIdx].pos = (players[turnIdx].pos + v) % 40;
+                render(); setTimeout(() => check(players[turnIdx]), 500);
+            }
+        }, 60);
+    }
+
+    function check(p) {
+        const c = document.getElementById(`cell-${p.pos}`);
+        let t = c.classList.contains('type-yesno')?'yn':(c.classList.contains('type-knowledge')?'kn':(c.classList.contains('type-scenario')?'sc':'empty'));
+        if(t !== 'empty') open(t, p); else next();
+    }
+
+    function open(type, p) {
+        let card = decks[type].pop();
+        if(!card) { 
+            // If specific deck is out, try to pick from any available deck
+            const anyDeck = Object.keys(decks).find(k => decks[k].length > 0);
+            if(anyDeck) { card = decks[anyDeck].pop(); type = anyDeck; }
+            else { next(); return; }
+        }
+
+        usedCount++;
+        document.getElementById('card-counter').innerText = `${usedCount}/${TARGET}`;
+
+        const m = document.getElementById('modal'), qtxt = document.getElementById('card-question'), btns = document.getElementById('card-btns');
+        m.classList.remove('hidden'); btns.innerHTML = '';
+        document.getElementById('type-box').classList.add('hidden');
+        document.getElementById('feedback-summary').classList.add('hidden');
+        document.getElementById('final-results').classList.add('hidden');
+        qtxt.classList.remove('hidden');
+
+        const badge = document.getElementById('card-badge');
+        badge.innerText = type === 'yn' ? 'YES / NO' : type === 'kn' ? 'KNOWLEDGE' : 'SCENARIO';
+        badge.className = `inline-block px-3 py-1 rounded-full text-[8px] font-black text-white mb-3 ${type==='yn'?'bg-sky-500':(type==='kn'?'bg-pink-500':'bg-rose-500')}`;
+        qtxt.innerText = card.q;
+
+        let mission = (Math.random() < 0.25) ? DB_MISSIONS[Math.floor(Math.random()*DB_MISSIONS.length)] : null;
+        if(mission) {
+            const mb = document.createElement('div'); mb.className = "mb-3 p-2 bg-amber-50 text-amber-800 border-2 border-dashed border-amber-200 rounded-xl text-[9px] font-bold";
+            mb.innerText = `🕵️ ภารกิจลับ: ${mission.t}`; btns.appendChild(mb);
+        }
+
+        if(type === 'yn') {
+            btns.appendChild(createBtn("ใช่ / ถูกต้อง", () => proc(card.a === true, 2, "ถูกต้อง", "ผิด", card.r, mission)));
+            btns.appendChild(createBtn("ไม่ใช่ / ผิด", () => proc(card.a === false, 2, "ถูกต้อง", "ผิด", card.r, mission)));
+        } else if(type === 'kn') {
+            document.getElementById('type-box').classList.remove('hidden');
+            document.getElementById('type-input').value = '';
+            btns.appendChild(createBtn("ตรวจสอบคำตอบ", () => {
+                let ok = card.k.some(k => document.getElementById('type-input').value.toLowerCase().includes(k.toLowerCase()));
+                proc(ok, 3, "ถูกต้อง", "ผิด", card.r, mission);
+            }));
+        } else {
+            card.o.forEach(o => btns.appendChild(createBtn(o.t, () => proc(true, o.p, "ผลลัพธ์", "ผลลัพธ์", o.r, mission))));
+        }
+
+        function proc(isS, pts, sM, fM, explain, mis) {
+            let mod = isS ? Math.abs(pts) : -Math.abs(pts);
+            let logs = [{t: isS?sM:fM, p: mod, r: explain, c: isS?'text-green-600':'text-red-600'}];
+            if(mis) {
+                qtxt.innerHTML = `<div class="text-xs font-black text-indigo-500 mb-1">ผลภารกิจลับ</div><div class="text-[10px] text-slate-400 italic">"${mis.t}"</div>`;
+                btns.innerHTML = '';
+                btns.appendChild(createBtn(`ทำสำเร็จ (+${mis.b})`, () => { logs.push({t:"ภารกิจ", p:mis.b, r:"สำเร็จ", c:"text-amber-500"}); end(logs); }));
+                btns.appendChild(createBtn("ไม่สำเร็จ (0)", () => end(logs)));
+            } else end(logs);
+        }
+
+        function end(logs) {
+            p.score += logs.reduce((a,l) => a+l.p, 0);
+            qtxt.classList.add('hidden');
+            document.getElementById('type-box').classList.add('hidden');
+            const fs = document.getElementById('feedback-summary'); fs.classList.remove('hidden');
+            document.getElementById('feedback-list').innerHTML = logs.map(l => `
+                <div class="bg-slate-50 p-2 rounded-xl border border-slate-100 flex justify-between items-center">
+                    <div class="text-[9px] text-slate-600 font-bold">${l.r}</div>
+                    <div class="${l.c} font-black text-xs">${l.p>=0?'+':''}${l.p}</div>
+                </div>`).join('');
+            btns.innerHTML = '';
+            btns.appendChild(createBtn("ปิด", () => {
+                m.classList.add('hidden'); updateUI();
+                if(usedCount >= TARGET) showFinal(); else next();
+            }));
+        }
+    }
+
+    function showFinal() {
+        const m = document.getElementById('modal'), qtxt = document.getElementById('card-question'), btns = document.getElementById('card-btns');
+        m.classList.remove('hidden');
+        document.getElementById('card-badge').className = "hidden";
+        document.getElementById('feedback-summary').classList.add('hidden');
+        document.getElementById('final-results').classList.remove('hidden');
+        qtxt.innerText = "🏁 สิ้นสุดภารกิจ! สรุปคะแนน";
+        
+        let sorted = [...players].sort((a,b) => b.score - a.score);
+        document.getElementById('final-rank-list').innerHTML = sorted.map((p, i) => `
+            <div class="flex items-center justify-between p-3 rounded-2xl ${i===0?'bg-amber-100 border-2 border-amber-300':'bg-slate-50 border border-slate-100'}">
+                <div class="flex items-center gap-3">
+                    <span class="text-lg font-black ${i===0?'text-amber-600':'text-slate-400'}">#${i+1}</span>
+                    <div class="w-3 h-3 rounded-full" style="background:${p.color}"></div>
+                    <span class="font-bold text-slate-700">${p.name}</span>
+                </div>
+                <span class="font-black text-indigo-600">${p.score}</span>
+            </div>`).join('');
+        
+        btns.innerHTML = '';
+        btns.appendChild(createBtn("กลับหน้าหลัก / เล่นอีกครั้ง", () => {
+            m.classList.add('hidden');
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('setup-screen').classList.remove('hidden');
+        }));
+    }
+
+    function createBtn(t, f) {
+        const b = document.createElement('button');
+        b.className = "w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-[10px] active:scale-95 border-b-2 border-slate-300 transition-all";
+        b.innerText = t; b.onclick = f; return b;
+    }
+
+    function updateUI() {
+        const s = [...players].sort((a,b) => b.score - a.score);
+        document.getElementById('rankings').innerHTML = s.map((p, i) => `
+            <div class="flex justify-between items-center text-[9px] py-0.5 border-b border-white/5">
+                <span class="font-bold text-slate-300">#${i+1} ${p.name}</span>
+                <span class="text-indigo-400 font-black">${p.score}</span>
+            </div>`).join('');
+    }
+
+    function startTurn() {
+        const p = players[turnIdx];
+        document.getElementById('turn-label').innerText = p.name;
+        document.getElementById('turn-label').style.color = p.color;
+        isAction = false;
+    }
+
+    function next() { turnIdx = (turnIdx + 1) % players.length; startTurn(); }
+
+    function render() {
+        document.querySelectorAll('.player-token').forEach(e => e.remove());
+        players.forEach(p => {
+            const c = document.getElementById(`cell-${p.pos}`);
+            const t = document.createElement('div');
+            t.className = "player-token"; t.style.backgroundColor = p.color;
+            let offset = players.filter(x => x.pos === p.pos && x.id < p.id).length;
+            t.style.left = `${1 + (offset * 3)}px`; t.style.top = `${1 + (offset * 3)}px`;
+            c.appendChild(t);
+        });
+    }
+</script>
+</body>
+</html>
+
+```
+
+<html>
+  <head>
+    <title>Hello, World!</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+      <h1 class="title">Hello World!</h1>
+      <p id="currentTime"></p>
+      <script src="script.js"></script>
+  </body>
+</html>
